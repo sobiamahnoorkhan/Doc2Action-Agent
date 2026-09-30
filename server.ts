@@ -101,14 +101,14 @@ CORE GROUNDING RULES:
 - Never invent requirements, owners, deadlines, approvals, policies, exceptions, rejection paths, alternative procedures, or facts.
 - Every generated statement must be traceable to explicit source text or to a direct, necessary sequencing of an explicitly stated step.
 - Every explicit source action should be represented consistently: if an action is shown as a workflow step, it should also have a corresponding task when it represents work performed by a person/role.
-- Requirement extraction must preserve ALL explicit operational obligations from the source. Do not merge, summarize, or omit separate source clauses merely for brevity. Every explicit action, responsibility, conditional action, notification, return/correction, approval/rejection, preparation/fulfillment, pending/status update, and collection/receipt requirement that represents an obligation must appear as its own traceable requirement. If a source action is represented as a workflow step/task, its underlying obligation must also be represented in Requirements. Requirements should be atomic and traceable; never reduce a multi-action SOP to only its headline requirements. For example, submitting a request and including required fields should remain separately traceable when both are explicit, and returning an incomplete request, forwarding a complete request, notifying rejection, checking availability, preparing equipment, recording pending status, notifying readiness, and collecting equipment must each remain represented when explicitly stated.
+- Requirement extraction must preserve ALL explicit operational obligations from the source, but must NOT manufacture a new requirement from a dependency or sequencing relationship that is already captured by another source action. Do not merge, summarize, or omit separate source clauses merely for brevity. Every explicit action, responsibility, conditional action, notification, return/correction, approval/rejection, preparation/fulfillment, pending/status update, and collection/receipt requirement that represents a distinct obligation must appear as its own traceable requirement. If a source action is represented as a workflow step/task, its underlying obligation must also be represented in Requirements. A phrase such as "before a purchase order is issued" establishes ordering/dependency; it does not by itself create a second standalone requirement when the underlying approval and purchase-order actions are already separate source obligations. Requirements should be atomic and traceable; never reduce a multi-action SOP to only its headline requirements.
 - Workflow automation labels must match the nature of the source action. Use "manual_review" for an explicit human inspection/check, including reviewing a request for completeness or checking equipment availability. Use "checklist" only when the source explicitly requires or clearly establishes checklist-style behavior.
 - STRICT SOURCE-ACTION PRESERVATION: Preserve the source action exactly at the same semantic level. Do not operationally embellish, reinterpret, or expand an action. If the source says "return", output "return"; do not turn it into send, notify, message, email, or generate_message unless the source separately and explicitly requires a notification/message. If the source says "check availability", output only check availability; do not change it to check stock, inventory, or system status. If the source says "record as pending", output only record as pending; do not add update system/database/status unless explicitly stated. Do not introduce channels, systems, emails, messages, inventory concepts, database updates, or other implementation details absent from the source.
-- COMMUNICATION STRICTNESS: Create a communication only when the source explicitly states that a notification, message, email, alert, or other communication is sent/received. A return, forwarding, approval, rejection, preparation, collection, or other action is NOT by itself a communication. If the source says an action is returned/forwarded but does not explicitly call it a notification/message, keep it as a task/workflow action and do not create a communication entry.
+- COMMUNICATION STRICTNESS: Create a communication only when the source explicitly states that a notification, message, email, alert, purchase order transmission, or other communication artifact is sent/received. A return, forwarding, approval, rejection, preparation, collection, or other action is NOT by itself a communication. If the source explicitly says Procurement sends/issues a purchase order to an approved vendor, represent that purchase-order transmission as both the required operational task/workflow action and one communication record; because the source does not provide message wording, the communication draft must be exactly "Not specified in source". If the source says an action is returned/forwarded but does not explicitly call it a notification/message/communication artifact, keep it as a task/workflow action and do not create a communication entry.
 - AUTOMATION TYPE MUST FOLLOW SOURCE SEMANTICS: Do not select generate_message merely because an employee is involved or because information moves between roles. Use generate_message only for an explicitly stated communication. Use create_task for explicit operational actions such as submit, return, forward, prepare, record, and collect.
 - Approval/review actions must not be represented only as decisions; create the corresponding human task as well. Explicit source communication/notification actions must also have a corresponding task when they represent work, even if the communication is also listed under communications.
 - If a condition, branch, outcome, exception, criterion, deadline, priority, or procedure is not specified in the source, use exactly: "Not specified in source".
-- DECISION STRICTNESS: Never create a decision object from a review/check alone. If the source contains only linear actions with no explicit condition or branch, the decisions array MUST be empty.
+- DECISION STRICTNESS: Never create a decision object from a review/check alone. An approval action is a task when the source merely says a role approves something but does not explicitly establish an alternative route/outcome; do not turn that approval into a separate YES/NO decision unless the source explicitly establishes approval/rejection or another branch. If the source contains only linear actions with no explicit condition or branch, the decisions array MUST be empty. A decision object is a routing representation, not an extra workflow step: do not add a separate "check threshold", "decision gate", or similar workflow step unless the source itself explicitly requires that check/action. Represent the branch through the relevant conditional task/workflow action instead.
 - Do not infer a missing NO branch merely because a YES branch exists.
 - Do not introduce broader concepts or labels that the source does not establish (for example, do not use "competitive bidding" when the source only says "vendor quotations").
 - If information is missing or unclear, mark owner or field as "Not specified in source".
@@ -237,50 +237,49 @@ function generateFallbackWorkflow(sourceText: string) {
         'Finance department verifies the vendor invoice against the approved purchase order before payment.',
       ],
       constraints: [
-        'Minimum 3 quotations for purchases exceeding PKR 100,000 threshold.',
-        'No PO issuance without department head sign-off.',
+        'Purchases above PKR 100,000 require at least three vendor quotations.',
       ],
       tasks: [
         {
           id: 'TASK-01',
-          title: 'Collect 3 Vendor Quotations',
+          title: 'Collect vendor quotations',
           description:
-            'Request competitive price bids from at least three qualified vendors.',
+            'Collect at least three vendor quotations for purchases above PKR 100,000.',
           owner: 'Requesting Department',
           priority: 'Not specified in source',
           depends_on: [],
         },
         {
           id: 'TASK-02',
-          title: 'Prepare Quotation Comparison Matrix',
+          title: 'Prepare quotation comparison',
           description:
-            'Evaluate pricing, delivery timelines, and specs across received bids.',
+            'Prepare a comparison of quotations.',
           owner: 'Requesting Department',
           priority: 'Not specified in source',
           depends_on: ['TASK-01'],
         },
         {
           id: 'TASK-03',
-          title: 'Submit Vendor Selection for Approval',
+          title: 'Approve selected vendor',
           description:
-            'Forward recommended vendor and comparison matrix to Department Head.',
+            'Approve the selected vendor before a purchase order is issued.',
           owner: 'Department Head',
           priority: 'Not specified in source',
           depends_on: ['TASK-02'],
         },
         {
           id: 'TASK-04',
-          title: 'Generate & Dispatch Purchase Order',
-          description: 'Issue finalized PO and send to chosen vendor.',
+          title: 'Send purchase order',
+          description: 'Send the purchase order to the approved vendor.',
           owner: 'Procurement',
           priority: 'Not specified in source',
           depends_on: ['TASK-03'],
         },
         {
           id: 'TASK-05',
-          title: 'Verify Invoice & Match with PO',
+          title: 'Verify invoice',
           description:
-            'Inspect invoice accuracy and match against approved purchase order.',
+            'Verify the invoice against the approved purchase order.',
           owner: 'Finance',
           priority: 'Not specified in source',
           depends_on: ['TASK-04'],
@@ -288,83 +287,62 @@ function generateFallbackWorkflow(sourceText: string) {
       ],
       decisions: [
         {
-          condition: 'Purchases above PKR 100,000',
+          condition: 'Purchase amount exceeds PKR 100,000',
           yes_action: 'Require at least three vendor quotations',
-          no_action: 'Not specified in source',
-        },
-        {
-          condition: 'Department head approves selected vendor',
-          yes_action: 'Authorize purchase order issuance',
           no_action: 'Not specified in source',
         },
       ],
       workflow: [
         {
           step: 1,
-          action: 'Collect quotations from eligible vendors',
-          agent: 'Task Agent',
+          action: 'Collect at least three vendor quotations for purchases above PKR 100,000',
+          agent: 'Workflow Agent',
           depends_on: [],
-          automation: 'checklist',
+          automation: 'create_task',
         },
         {
           step: 2,
-          action: 'Prepare comparative quotation analysis',
-          agent: 'Task Agent',
+          action: 'Prepare a comparison of quotations',
+          agent: 'Workflow Agent',
           depends_on: ['TASK-01'],
-          automation: 'checklist',
+          automation: 'create_task',
         },
         {
           step: 3,
-          action: 'Department head review and approval gate',
-          agent: 'Decision Agent',
+          action: 'Approve the selected vendor before a purchase order is issued',
+          agent: 'Workflow Agent',
           depends_on: ['TASK-02'],
           automation: 'approval_route',
         },
         {
           step: 4,
-          action: 'Procurement issues official purchase order',
+          action: 'Send the purchase order to the approved vendor',
           agent: 'Workflow Agent',
           depends_on: ['TASK-03'],
           automation: 'create_task',
         },
         {
           step: 5,
-          action: 'Send PO confirmation notice to approved vendor',
-          agent: 'Communication Agent',
+          action: 'Verify the invoice against the approved purchase order',
+          agent: 'Workflow Agent',
           depends_on: ['TASK-04'],
-          automation: 'generate_message',
-        },
-        {
-          step: 6,
-          action: 'Finance verifies invoice matching approved PO',
-          agent: 'Verification Agent',
-          depends_on: ['TASK-05'],
           automation: 'manual_review',
         },
       ],
       communications: [
         {
-          type: 'Approval Request',
-          audience: 'Department Head',
-          trigger: 'Quotation comparison matrix completed',
-          draft:
-            'Dear Department Head, please review and approve the attached vendor comparison sheet for procurement exceeding PKR 100,000.',
-        },
-        {
           type: 'Purchase Order Transmission',
-          audience: 'Approved Vendor',
-          trigger: 'PO issuance authorized by Department Head',
+          audience: 'Approved vendor',
+          trigger: 'Approved vendor selected and purchase order issued',
           draft: 'Not specified in source',
         },
       ],
       verification: [
-        'All 5 policy clauses directly mapped to tasks and sequential workflow steps.',
-        'PKR 100,000 threshold requirement enforced in decision gate.',
-        'Role separation maintained between Requesting Dept, Dept Head, Procurement, and Finance.',
+        'All 5 policy clauses are mapped to traceable requirements, tasks, and workflow steps.',
+        'The PKR 100,000 threshold is represented as the only explicit conditional branch; the source does not specify a NO route.',
+        'No approval rejection route, deadline, priority, or additional procedure is invented.',
       ],
-      risks: [
-        'Vendor delivery lead time not explicitly bounded in policy document.',
-      ],
+      risks: [],
       verified: true,
     };
   }
