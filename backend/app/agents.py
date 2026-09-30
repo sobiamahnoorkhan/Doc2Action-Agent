@@ -19,7 +19,7 @@ def _json_agent(name: str, instruction: str, context: str) -> dict:
 Follow the instruction exactly.
 Use ONLY the supplied source/context. Never invent requirements, owners, deadlines, approvals, policies, or facts.
 If information is missing, use "Unknown".
-Return valid JSON only.
+Return valid JSON only. Do not use markdown fences.
 
 INSTRUCTION:
 {instruction}
@@ -27,18 +27,28 @@ INSTRUCTION:
 CONTEXT:
 {context[:60000]}
 """
-    interaction = _client().interactions.create(
-        model=MODEL,
-        input=prompt,
-        generation_config={"thinking_level": "low"},
-    )
-    response_text = (interaction.output_text or "").strip()
-    if response_text.startswith("```"):
-        response_text = response_text.replace("```json", "", 1).replace("```", "", 1).strip()
-    try:
-        return json.loads(response_text)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"{name} returned invalid JSON: {exc}. Response: {response_text[:500]}")
+    last_error = None
+    for attempt in range(4):
+        try:
+            interaction = _client().interactions.create(
+                model=MODEL,
+                input=prompt,
+            )
+            response_text = (interaction.output_text or "").strip()
+            if response_text.startswith("```"):
+                response_text = response_text.replace("```json", "", 1).replace("```", "", 1).strip()
+            return json.loads(response_text)
+        except Exception as exc:
+            last_error = exc
+            error_text = str(exc)
+            if "503" not in error_text and "UNAVAILABLE" not in error_text and "Service Unavailable" not in error_text:
+                raise
+            if attempt < 3:
+                delay = 2 ** (attempt + 1)
+                print(f"[{name}] Gemini temporarily unavailable. Retry {attempt + 1}/3 in {delay}s...")
+                import time
+                time.sleep(delay)
+    raise RuntimeError(f"{name} failed after 4 attempts: {last_error}")
 
 def run_document_workflow(source_text: str) -> dict:
     requirements = _json_agent(
