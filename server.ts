@@ -311,7 +311,7 @@ function stabilizeDecisions(result: any, sourceText: string): any {
       const aNorm = normalizeDecisionText(a.condition);
       const bNorm = normalizeDecisionText(b.condition);
 
-      if (aNorm === \`not \${bNorm}\` || bNorm === \`not \${aNorm}\`) {
+      if (aNorm === `not ${bNorm}` || bNorm === `not ${aNorm}`) {
         const positive = aNorm.startsWith('not ') ? b : a;
         const negative = aNorm.startsWith('not ') ? a : b;
         pushDecision(decisions, {
