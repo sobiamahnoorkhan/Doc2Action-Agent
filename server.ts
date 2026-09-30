@@ -161,57 +161,179 @@ REQUIRED JSON STRUCTURE:
 DOCUMENT CONTENT:
 `;
 
+function cleanDecisionClause(value: string): string {
+  return value
+    .replace(/^\s*\d+[.)]\s*/, '')
+    .replace(/^[\-•]\s*/, '')
+    .replace(/[.;]\s*$/, '')
+    .trim();
+}
+
+function normalizeDecisionText(value: string): string {
+  return cleanDecisionClause(value)
+    .toLowerCase()
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sourceClauses(sourceText: string): string[] {
+  const lines = sourceText
+    .split(/\r?\n/)
+    .map(cleanDecisionClause)
+    .filter(Boolean);
+
+  const clauses: string[] = [];
+  for (const line of lines) {
+    const parts = line.split(/\s+(?=if\s+|when\s+|otherwise\s+)/i);
+    for (const part of parts) {
+      const clause = cleanDecisionClause(part);
+      if (clause) clauses.push(clause);
+    }
+  }
+  return clauses;
+}
+
+function pushDecision(decisions: any[], decision: any) {
+  const key = [
+    normalizeDecisionText(decision.condition),
+    normalizeDecisionText(decision.yes_action),
+    normalizeDecisionText(decision.no_action),
+  ].join('|');
+
+  if (!decisions.some((d) => [
+    normalizeDecisionText(d.condition),
+    normalizeDecisionText(d.yes_action),
+    normalizeDecisionText(d.no_action),
+  ].join('|') === key)) {
+    decisions.push({
+      condition: cleanDecisionClause(decision.condition),
+      yes_action: cleanDecisionClause(decision.yes_action),
+      no_action: cleanDecisionClause(decision.no_action),
+    });
+  }
+}
+
 function stabilizeDecisions(result: any, sourceText: string): any {
-  const source = sourceText.toLowerCase();
+  const clauses = sourceClauses(sourceText);
   const decisions: any[] = [];
 
-  const lines = sourceText.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const branches = clauses.map((clause, index) => {
+    const match = clause.match(/^(if|when)\s+(.+?),\s*(.+)$/i);
+    if (!match) return null;
+    return {
+      index,
+      condition: match[2].trim(),
+      action: match[3].trim(),
+    };
+  }).filter(Boolean) as Array<{ index: number; condition: string; action: string }>;
 
-  // Only explicit source branches become decisions.
-  for (const line of lines) {
-    const clean = line.replace(/^\s*\d+[.)]\s*/, '').trim();
+  const used = new Set<number>();
 
-    // Explicit if/when branches: require both a condition and an action route.
-    const ifMatch = clean.match(/^if\s+(.+?),\s*(.+)$/i);
-    if (ifMatch) {
-      const condition = ifMatch[1].trim();
-      const yesAction = ifMatch[2].trim();
-      const following = lines[lines.indexOf(line) + 1] || '';
-      const noMatch = following.match(/^if\s+(?:the\s+)?(.+?)\s+is\s+not\s+(.+?),\s*(.+)$/i);
-      if (noMatch) {
-        decisions.push({
-          condition: condition.replace(/[.]$/, ''),
-          yes_action: yesAction.replace(/[.]$/, ''),
-          no_action: noMatch[3].replace(/[.]$/, ''),
+  // Pair explicit positive/negative branches such as approved/rejected,
+  // complete/incomplete, and available/not available.
+  const polarityPairs: Array<[RegExp, RegExp]> = [
+    [/\bapproved\b/i, /\brejected\b/i],
+    [/\baccepted\b/i, /\bdeclined\b/i],
+    [/\bcomplete\b/i, /\bincomplete\b/i],
+    [/\bavailable\b/i, /\bnot\s+available\b/i],
+  ];
+
+  const polarityWords = /\bapproved\b|\brejected\b|\baccepted\b|\bdeclined\b|\bcomplete\b|\bincomplete\b|\bavailable\b|\bnot\s+available\b/gi;
+
+  for (let i = 0; i < branches.length; i++) {
+    if (used.has(i)) continue;
+    const a = branches[i];
+
+    for (let j = i + 1; j < branches.length; j++) {
+      if (used.has(j)) continue;
+      const b = branches[j];
+
+      const pair = polarityPairs.find(([positive, negative]) =>
+        (positive.test(a.condition) && negative.test(b.condition)) ||
+        (negative.test(a.condition) && positive.test(b.condition))
+      );
+
+      if (!pair) continue;
+
+      const aBase = normalizeDecisionText(a.condition).replace(polarityWords, '').replace(/\s+/g, ' ').trim();
+      const bBase = normalizeDecisionText(b.condition).replace(polarityWords, '').replace(/\s+/g, ' ').trim();
+
+      if (aBase && aBase === bBase) {
+        const aPositive = pair[0].test(a.condition);
+        pushDecision(decisions, {
+          condition: aPositive ? a.condition : b.condition,
+          yes_action: aPositive ? a.action : b.action,
+          no_action: aPositive ? b.action : a.action,
         });
+        used.add(i);
+        used.add(j);
+        break;
       }
     }
   }
 
-  // Explicit approval/rejection is a decision only when the source establishes both outcomes.
-  const approvalLine = lines.find((l) => /\bapproves?\s+or\s+rejects?|\bapproval\s+or\s+rejection\b|\bapproved\s+or\s+rejected\b/i.test(l));
-  if (approvalLine) {
-    const clean = approvalLine.replace(/^\s*\d+[.)]\s*/, '').replace(/[.]$/, '').trim();
-    if (!decisions.some((d) => /approve|reject/i.test(d.condition))) {
-      decisions.push({
-        condition: clean,
-        yes_action: 'Approve the request',
-        no_action: 'Reject the request',
+  // Explicit "If X, Y; otherwise Z" establishes both routes.
+  for (const clause of clauses) {
+    const match = clause.match(/^if\s+(.+?),\s*(.+?)\s*;\s*otherwise\s+(.+)$/i);
+    if (match) {
+      pushDecision(decisions, {
+        condition: match[1],
+        yes_action: match[2],
+        no_action: match[3],
       });
     }
   }
 
-  // Explicit threshold/duration conditions with a stated consequence.
-  for (const line of lines) {
-    const clean = line.replace(/^\s*\d+[.)]\s*/, '').replace(/[.]$/, '').trim();
-    const m = clean.match(/^(.+?)\s+(above|exceeding|longer than)\s+(.+?)\s+require\s+(.+)$/i);
-    if (m) {
-      const key = m[1].trim();
-      const condition = `${key} ${m[2].toLowerCase()} ${m[3].trim()}`;
-      const yesAction = `Require ${m[4].trim()}`;
-      if (!decisions.some((d) => d.condition.toLowerCase() === condition.toLowerCase())) {
-        decisions.push({ condition, yes_action: yesAction, no_action: 'Not specified in source' });
+  // Explicit threshold/duration conditions such as:
+  // "If the request is for more than 5 working days, HR approval is required."
+  for (const branch of branches) {
+    if (used.has(branch.index)) continue;
+    if (/\b(more than|over|above|exceeding|exceeds|longer than|less than|under|below|fewer than)\b/i.test(branch.condition)) {
+      pushDecision(decisions, {
+        condition: branch.condition,
+        yes_action: branch.action,
+        no_action: 'Not specified in source',
+      });
+      used.add(branch.index);
+    }
+  }
+
+  // Pair explicit "If X..." with "If not X..." when both routes are stated.
+  for (let i = 0; i < branches.length; i++) {
+    if (used.has(i)) continue;
+    const a = branches[i];
+
+    for (let j = i + 1; j < branches.length; j++) {
+      if (used.has(j)) continue;
+      const b = branches[j];
+
+      const aNorm = normalizeDecisionText(a.condition);
+      const bNorm = normalizeDecisionText(b.condition);
+
+      if (aNorm === \`not \${bNorm}\` || bNorm === \`not \${aNorm}\`) {
+        const positive = aNorm.startsWith('not ') ? b : a;
+        const negative = aNorm.startsWith('not ') ? a : b;
+        pushDecision(decisions, {
+          condition: positive.condition,
+          yes_action: positive.action,
+          no_action: negative.action,
+        });
+        used.add(i);
+        used.add(j);
+        break;
       }
+    }
+  }
+
+  // "Approves or rejects" is an explicit choice even when written in one clause.
+  for (const clause of clauses) {
+    if (/\bapproves?\s+or\s+rejects?\b|\bapproval\s+or\s+rejection\b|\bapproved\s+or\s+rejected\b/i.test(clause)) {
+      pushDecision(decisions, {
+        condition: clause,
+        yes_action: 'Approve the request',
+        no_action: 'Reject the request',
+      });
     }
   }
 
