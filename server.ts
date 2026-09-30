@@ -231,7 +231,7 @@ function generateFallbackWorkflow(sourceText: string) {
           description:
             'Request competitive price bids from at least three qualified vendors.',
           owner: 'Requesting Department',
-          priority: 'HIGH',
+          priority: 'Not specified in source',
           depends_on: [],
         },
         {
@@ -240,7 +240,7 @@ function generateFallbackWorkflow(sourceText: string) {
           description:
             'Evaluate pricing, delivery timelines, and specs across received bids.',
           owner: 'Requesting Department',
-          priority: 'HIGH',
+          priority: 'Not specified in source',
           depends_on: ['TASK-01'],
         },
         {
@@ -249,7 +249,7 @@ function generateFallbackWorkflow(sourceText: string) {
           description:
             'Forward recommended vendor and comparison matrix to Department Head.',
           owner: 'Department Head',
-          priority: 'CRITICAL',
+          priority: 'Not specified in source',
           depends_on: ['TASK-02'],
         },
         {
@@ -257,7 +257,7 @@ function generateFallbackWorkflow(sourceText: string) {
           title: 'Generate & Dispatch Purchase Order',
           description: 'Issue finalized PO and send to chosen vendor.',
           owner: 'Procurement',
-          priority: 'HIGH',
+          priority: 'Not specified in source',
           depends_on: ['TASK-03'],
         },
         {
@@ -266,7 +266,7 @@ function generateFallbackWorkflow(sourceText: string) {
           description:
             'Inspect invoice accuracy and match against approved purchase order.',
           owner: 'Finance',
-          priority: 'MEDIUM',
+          priority: 'Not specified in source',
           depends_on: ['TASK-04'],
         },
       ],
@@ -375,7 +375,7 @@ function generateFallbackWorkflow(sourceText: string) {
           title: 'Submit Leave Application',
           description: 'Employee files leave dates and justification to reporting manager.',
           owner: 'Employee',
-          priority: 'MEDIUM',
+          priority: 'Not specified in source',
           depends_on: [],
         },
         {
@@ -383,7 +383,7 @@ function generateFallbackWorkflow(sourceText: string) {
           title: 'HR Review for Extended Absence',
           description: 'HR evaluates leave balance and team coverage if request exceeds 3 days.',
           owner: 'HR Department',
-          priority: 'HIGH',
+          priority: 'Not specified in source',
           depends_on: ['TASK-01'],
         },
         {
@@ -391,7 +391,7 @@ function generateFallbackWorkflow(sourceText: string) {
           title: 'Manager Approval Decision',
           description: 'Reporting manager decides on approval or rejection based on operational coverage.',
           owner: 'Reporting Manager',
-          priority: 'HIGH',
+          priority: 'Not specified in source',
           depends_on: ['TASK-01'],
         },
         {
@@ -399,15 +399,15 @@ function generateFallbackWorkflow(sourceText: string) {
           title: 'Record Approved Leave',
           description: 'HR logs approved absence in personnel records and attendance tracking.',
           owner: 'HR Department',
-          priority: 'MEDIUM',
+          priority: 'Not specified in source',
           depends_on: ['TASK-03'],
         },
         {
           id: 'TASK-05',
           title: 'Send Decision Notification',
           description: 'Automated notification dispatched to employee with outcome details.',
-          owner: 'System / HR',
-          priority: 'LOW',
+          owner: 'Not specified in source',
+          priority: 'Not specified in source',
           depends_on: ['TASK-03'],
         },
       ],
