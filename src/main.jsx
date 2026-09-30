@@ -95,6 +95,16 @@ function App() {
           </div>
         </section>
 
+        <section className="agentic-proof">
+          <div className="proof-intro"><span className="section-kicker">WHY AGENTIC AI</span><h2>Specialized agents collaborate on one source-grounded process.</h2><p>Each stage has a distinct responsibility, while Verification checks the final workflow back against the document.</p></div>
+          <div className="proof-grid">
+            <div className="proof-card"><strong>01</strong><span>Decompose</span><small>Requirements and tasks are extracted separately.</small></div>
+            <div className="proof-card"><strong>02</strong><span>Reason</span><small>Only explicit source conditions become decision routes.</small></div>
+            <div className="proof-card"><strong>03</strong><span>Execute</span><small>Actions become ordered workflow steps and safe demo tasks.</small></div>
+            <div className="proof-card"><strong>04</strong><span>Verify</span><small>Generated outputs are checked for source traceability.</small></div>
+          </div>
+        </section>
+
         <section className="workspace">
           <div className="card input-card">
             <div className="section-kicker">01 · INPUT</div>
