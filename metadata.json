@@ -1,0 +1,7 @@
+{
+  "name": "Doc2Action-Agent",
+  "description": "Turn business documents into executable workflows with Generative AI, Multi-Agent Systems, and Business Process Automation.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

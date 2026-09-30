@@ -1,0 +1,239 @@
+import React, { useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./style.css";
+
+const API = import.meta.env.VITE_API_URL || "";
+const DEMO_PROCUREMENT = `PROCUREMENT POLICY
+1. Purchases above PKR 100,000 require at least three vendor quotations.
+2. The requesting department prepares a comparison of quotations.
+3. The department head approves the selected vendor before a purchase order is issued.
+4. Procurement sends the purchase order to the approved vendor.
+5. Finance verifies the invoice against the approved purchase order.`;
+
+const DEMO_LEAVE = `EMPLOYEE LEAVE POLICY
+1. Employees submit leave requests to their reporting manager.
+2. Leave requests longer than 3 working days require HR review.
+3. The manager approves or rejects the request.
+4. Approved leave is recorded by HR.
+5. The employee receives an approval or rejection message.`;
+
+function App() {
+  const [file, setFile] = useState(null),
+    [text, setText] = useState(""),
+    [data, setData] = useState(null),
+    [loading, setLoading] = useState(false),
+    [error, setError] = useState("");
+
+  async function analyze() {
+    setLoading(true);
+    setError("");
+    setData(null);
+    try {
+      let r;
+      if (file) {
+        const f = new FormData();
+        f.append("file", file);
+        r = await fetch(API + "/api/analyze", { method: "POST", body: f });
+      } else {
+        r = await fetch(API + "/api/analyze-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+      }
+      const b = await r.json();
+      if (!r.ok) throw Error(b.detail || b.error || "Analysis failed");
+      setData(b.result);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <header>
+        <b>Doc2<span>Action</span></b>
+        <small>MULTI-AGENT · BPA</small>
+      </header>
+      <main>
+        <section className="hero">
+          <label>DOCUMENT → DECISION → ACTION → AUTOMATION</label>
+          <h1>Turn documents into <em>executable workflows.</em></h1>
+          <p>Specialized AI agents convert policies, SOPs and business documents into tasks, decisions, approvals, communications and a safe execution queue.</p>
+        </section>
+        <section className="grid">
+          <div className="card">
+            <h2>Provide a document</h2>
+            <label className="drop">
+              <input
+                type="file"
+                accept=".pdf,.docx,.xlsx,.txt,.md"
+                onChange={(e) => {
+                  setFile(e.target.files ? e.target.files[0] : null);
+                  setText("");
+                }}
+              />
+              <strong>{file ? file.name : "Choose PDF, DOCX, XLSX or TXT"}</strong>
+              <small>or drag your document here</small>
+            </label>
+            <div className="or">OR PASTE TEXT</div>
+            <textarea
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setFile(null);
+              }}
+              placeholder="Paste a business policy or procedure..."
+            />
+            <div className="demo-bar">
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setText(DEMO_PROCUREMENT);
+                  setData(null);
+                }}
+              >
+                📋 Load Procurement Policy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setText(DEMO_LEAVE);
+                  setData(null);
+                }}
+              >
+                🏖️ Load Leave Policy
+              </button>
+            </div>
+            <div className="actions">
+              <button disabled={loading || (!file && !text.trim())} onClick={analyze}>
+                {loading ? "Agents are working..." : "Run Agent Workflow →"}
+              </button>
+              {error && <p className="error">{error}</p>}
+            </div>
+          </div>
+          <div className="card">
+            <h2>Multi-agent pipeline</h2>
+            {[
+              "Document & Requirement Agent — extracts rules",
+              "Task Agent — creates actionable work",
+              "Decision Agent — maps conditions",
+              "Workflow Agent — sequences process",
+              "Communication Agent — drafts messages",
+              "Verification Agent — audits source traceability",
+            ].map((x, i) => (
+              <div className="agent" key={i}>
+                <b>0{i + 1}</b>
+                {x}
+              </div>
+            ))}
+            <div className="automation-badge">
+              Automation Executor — queues tasks, approvals and messages
+            </div>
+          </div>
+        </section>
+        {data && <Results d={data} />}
+      </main>
+    </div>
+  );
+}
+
+function Results({ d }) {
+  return (
+    <section className="card results">
+      <label>GENERATED BUSINESS PROCESS</label>
+      <h2>{d.document_summary || "Action Plan"}</h2>
+      <Block t="Requirements">
+        <ul>
+          {(d.requirements || []).map((x, i) => (
+            <li key={i}>{x}</li>
+          ))}
+        </ul>
+      </Block>
+      <Block t="Workflow">
+        {(d.workflow || []).map((x, i) => (
+          <div className="step" key={i}>
+            <b>{x.step || i + 1}</b>
+            <span>
+              {x.action}
+              <small>
+                {x.agent} · {x.automation || "manual_review"}
+              </small>
+            </span>
+          </div>
+        ))}
+      </Block>
+      <Block t="Tasks">
+        {(d.tasks || []).map((x, i) => (
+          <div className="task" key={i}>
+            <strong>{x.title}</strong>
+            <small>
+              {x.owner} · {x.priority}
+            </small>
+            <p>{x.description}</p>
+          </div>
+        ))}
+      </Block>
+      <Block t="Decision Points">
+        {(d.decisions || []).map((x, i) => (
+          <div className="decision" key={i}>
+            <strong>{x.condition}</strong>
+            <div>YES → {x.yes_action}</div>
+            <div>NO → {x.no_action}</div>
+          </div>
+        ))}
+      </Block>
+      <Block t="Communications">
+        {(d.communications || []).map((x, i) => (
+          <div className="message" key={i}>
+            <strong>
+              {x.type} · {x.audience}
+            </strong>
+            <p>{x.draft}</p>
+          </div>
+        ))}
+      </Block>
+      <Block t="Automation Execution">
+        <div className="execution">
+          <b>{d.automation?.mode}</b>
+          <span>{d.automation?.execution_id}</span>
+        </div>
+        {(d.automation?.task_queue || []).map((x, i) => (
+          <div className="queue" key={i}>
+            <b>{x.status}</b>
+            <span>
+              {x.task_id} — {x.title}
+            </span>
+          </div>
+        ))}
+      </Block>
+      <Block t="Verification">
+        {(d.verification || []).map((x, i) => (
+          <p className="verify" key={i}>
+            {x}
+          </p>
+        ))}
+        <p className={d.verified ? "verified" : "warning"}>
+          {d.verified
+            ? "Workflow verified against source"
+            : "Review verification findings before execution"}
+        </p>
+      </Block>
+    </section>
+  );
+}
+
+function Block({ t, children }) {
+  return (
+    <div className="block">
+      <h3>{t}</h3>
+      {children}
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")).render(<App />);
