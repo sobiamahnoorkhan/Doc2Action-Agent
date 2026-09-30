@@ -80,7 +80,7 @@ Execute the following 6-agent pipeline on the document context and return a stru
 Agents in the pipeline:
 1. Document & Requirement Agent: Extracts the document purpose, explicit business requirements, and constraints/thresholds.
 2. Task Agent: Converts every explicit operational action or responsibility in the source into a task with an owner and dependency chain. This includes approval actions: if the source says a person/role must approve, review, reject, authorize, or sign off, create a corresponding task for that role. It also includes explicit communication/notification actions: if the source says someone receives, sends, issues, informs, or is notified of a message, create a corresponding task for that communication action. Do not omit an explicit approval/review or communication action just because it is also represented as a decision point or communication record. If the source does not identify who performs a communication action, set the task owner to "Not specified in source" rather than inventing an owner. Only create tasks supported by the source text. For priority and deadline, use "Not specified in source" when the source does not explicitly provide them.
-3. Decision Agent: Identifies conditional business decisions and their routes. For every decision, if either route is not explicitly specified in the source, set that route to "Not specified in source" rather than inventing a fallback or rejection procedure. Do not infer a missing NO branch merely because a YES branch exists.
+3. Decision Agent: Identifies only conditional business decisions and explicit branch points that are actually established by the source. A review, check, inspection, submission, forwarding, preparation, recording, or other action by itself is NOT a decision. Do NOT create a YES/NO decision for a step merely because an outcome could exist in real life. Create a decision only when the source explicitly establishes a condition, choice, approval/rejection, accept/deny outcome, or separate YES/NO/alternative routes. If a genuine source decision has a route that is not explicitly specified, set that route to "Not specified in source" rather than inventing a fallback or rejection procedure. Do not infer a missing NO branch merely because a YES branch exists.
 4. Workflow Agent: Sequences the source-grounded tasks and explicit decision branches into a complete executable end-to-end workflow (step, action, agent, depends_on, automation).
    - Do not compress, merge, or omit explicit operational actions merely to make the workflow shorter.
    - Every explicit source operational action should have a corresponding workflow step, including return/correction actions, approvals/rejections, notifications, preparation/fulfillment, pending/status updates, and collection/receipt actions when stated in the source.
@@ -108,6 +108,7 @@ CORE GROUNDING RULES:
 - AUTOMATION TYPE MUST FOLLOW SOURCE SEMANTICS: Do not select generate_message merely because an employee is involved or because information moves between roles. Use generate_message only for an explicitly stated communication. Use create_task for explicit operational actions such as submit, return, forward, prepare, record, and collect.
 - Approval/review actions must not be represented only as decisions; create the corresponding human task as well. Explicit source communication/notification actions must also have a corresponding task when they represent work, even if the communication is also listed under communications.
 - If a condition, branch, outcome, exception, criterion, deadline, priority, or procedure is not specified in the source, use exactly: "Not specified in source".
+- DECISION STRICTNESS: Never create a decision object from a review/check alone. If the source contains only linear actions with no explicit condition or branch, the decisions array MUST be empty.
 - Do not infer a missing NO branch merely because a YES branch exists.
 - Do not introduce broader concepts or labels that the source does not establish (for example, do not use "competitive bidding" when the source only says "vendor quotations").
 - If information is missing or unclear, mark owner or field as "Not specified in source".
@@ -512,7 +513,7 @@ function generateFallbackWorkflow(sourceText: string) {
   return {
     document_summary: title,
     requirements: items.slice(0, 6),
-    constraints: ['Strict adherence to steps outlined in source document.'],
+    constraints: [],
     tasks: items.slice(0, 5).map((line, i) => {
       const clean = line.replace(/^\d+[\.\)]\s*/, '');
       return {
@@ -526,17 +527,11 @@ function generateFallbackWorkflow(sourceText: string) {
             : clean.toLowerCase().includes('finance')
               ? 'Finance'
               : 'Assigned Stakeholder',
-        priority: i === 0 ? 'HIGH' : 'MEDIUM',
+        priority: 'Not specified in source',
         depends_on: i > 0 ? [`TASK-0${i}`] : [],
       };
     }),
-    decisions: [
-      {
-        condition: 'Policy condition stated in source',
-        yes_action: 'Action explicitly specified in source',
-        no_action: 'Not specified in source',
-      },
-    ],
+    decisions: [],
     workflow: items.slice(0, 5).map((line, i) => {
       const clean = line.replace(/^\d+[\.\)]\s*/, '');
       return {
@@ -544,17 +539,10 @@ function generateFallbackWorkflow(sourceText: string) {
         action: clean,
         agent: 'Workflow Agent',
         depends_on: i > 0 ? [`TASK-0${i}`] : [],
-        automation: i === 0 ? 'create_task' : i === 1 ? 'approval_route' : 'checklist',
+        automation: i === 0 ? 'create_task' : 'manual_review',
       };
     }),
-    communications: [
-      {
-        type: 'Workflow Update',
-        audience: 'Process Participants',
-        trigger: 'Workflow execution phase change',
-        draft: 'Not specified in source',
-      },
-    ],
+    communications: [],
     verification: [
       'All action items and sequencing traced directly to provided document clauses.',
     ],
