@@ -110,6 +110,7 @@ CORE GROUNDING RULES:
 - If a condition, branch, outcome, exception, criterion, deadline, priority, or procedure is not specified in the source, use exactly: "Not specified in source".
 - DECISION STRICTNESS: Never create a decision object from a review/check alone. An approval action is a task when the source merely says a role approves something but does not explicitly establish an alternative route/outcome; do not turn that approval into a separate YES/NO decision unless the source explicitly establishes approval/rejection or another branch. If the source contains only linear actions with no explicit condition or branch, the decisions array MUST be empty. A decision object is a routing representation, not an extra workflow step: do not add a separate "check threshold", "decision gate", or similar workflow step unless the source itself explicitly requires that check/action. Represent the branch through the relevant conditional task/workflow action instead.
 - Do not infer a missing NO branch merely because a YES branch exists.
+- A sequencing phrase such as "before a purchase order is issued" establishes ordering/dependency only; it does NOT create a standalone requirement, task, or workflow step to issue the purchase order unless the source separately and explicitly requires issuance.
 - Do not introduce broader concepts or labels that the source does not establish (for example, do not use "competitive bidding" when the source only says "vendor quotations").
 - If information is missing or unclear, mark owner or field as "Not specified in source".
 - Return pure JSON only. Do not wrap in markdown or code blocks.
@@ -229,6 +230,18 @@ function stabilizeDecisions(result: any, sourceText: string): any {
   }).filter(Boolean) as Array<{ index: number; condition: string; action: string }>;
 
   const used = new Set<number>();
+
+  // Direct threshold statements can establish a decision even without an "if" clause.
+  for (const clause of clauses) {
+    const match = clause.match(/^(.+?)\\s+(above|over|exceeding|more than|longer than|below|under|less than|fewer than)\\s+(.+?)\\s+(require|requires)\\s+(.+)$/i);
+    if (match) {
+      pushDecision(decisions, {
+        condition: match[1].trim() + ' ' + match[2].toLowerCase() + ' ' + match[3].trim(),
+        yes_action: 'Require ' + match[5].trim(),
+        no_action: 'Not specified in source',
+      });
+    }
+  }
 
   // Pair explicit positive/negative branches such as approved/rejected,
   // complete/incomplete, and available/not available.
