@@ -236,7 +236,7 @@ function Results({ d }) {
           </ResultSection>
 
           <ResultSection id="decisions" number="04" title="Decision Points">
-            {(d.decisions || []).map((x, i) => (
+            {(d.decisions || []).length === 0 ? <div className="empty-state"><span>✓</span><div><strong>No explicit decision points</strong><small>The source does not establish a conditional branch or approval outcome.</small></div></div> : (d.decisions || []).map((x, i) => (
               <div className="decision-card" key={i}>
                 <div className="decision-title"><span>?</span><strong>{x.condition}</strong></div>
                 <div className="routes"><div className="yes"><b>YES</b><span>{x.yes_action}</span></div><div className="no"><b>NO</b><span>{x.no_action}</span></div></div>
@@ -245,7 +245,7 @@ function Results({ d }) {
           </ResultSection>
 
           <ResultSection id="communications" number="05" title="Communications">
-            {(d.communications || []).map((x, i) => (
+            {(d.communications || []).length === 0 ? <div className="empty-state"><span>—</span><div><strong>No source-required communications</strong><small>No notification, message, email, or alert is explicitly established by the source.</small></div></div> : (d.communications || []).map((x, i) => (
               <div className="communication" key={i}><div><strong>{x.type || "Notification"}</strong><small>Audience · {x.audience}</small></div><div><small>Trigger · {x.trigger}</small><p>{x.draft || "Not specified in source"}</p></div></div>
             ))}
           </ResultSection>
