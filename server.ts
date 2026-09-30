@@ -101,6 +101,8 @@ CORE GROUNDING RULES:
 - Never invent requirements, owners, deadlines, approvals, policies, exceptions, rejection paths, alternative procedures, or facts.
 - Every generated statement must be traceable to explicit source text or to a direct, necessary sequencing of an explicitly stated step.
 - Every explicit source action should be represented consistently: if an action is shown as a workflow step, it should also have a corresponding task when it represents work performed by a person/role.
+- Requirement extraction must preserve distinct explicit obligations from the source. Do not merge separate requirements merely for brevity when the source states them as distinct duties or conditions. For example, submitting a request and including required fields should remain separately traceable when both are explicit.
+- Workflow automation labels must match the nature of the source action. Use "manual_review" for an explicit human inspection/check such as checking equipment availability; use "checklist" for explicit checklist/completeness validation.
 - Approval/review actions must not be represented only as decisions; create the corresponding human task as well. Explicit source communication/notification actions must also have a corresponding task when they represent work, even if the communication is also listed under communications.
 - If a condition, branch, outcome, exception, criterion, deadline, priority, or procedure is not specified in the source, use exactly: "Not specified in source".
 - Do not infer a missing NO branch merely because a YES branch exists.
