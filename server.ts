@@ -83,7 +83,13 @@ Agents in the pipeline:
 3. Decision Agent: Identifies conditional business decisions and their routes. For every decision, if either route is not explicitly specified in the source, set that route to "Not specified in source" rather than inventing a fallback or rejection procedure. Do not infer a missing NO branch merely because a YES branch exists.
 4. Workflow Agent: Sequences tasks into an executable end-to-end workflow (step, action, agent, depends_on, automation).
    (Valid automation types: "create_task", "approval_route", "generate_message", "checklist", "manual_review")
-5. Communication Agent: Drafts formal communications/notifications triggered by the workflow (type, audience, trigger, draft). Draft messages only from facts present in the context.
+5. Communication Agent: Identifies explicit communication/notification actions and drafts communications only when the source explicitly provides the actual message content.
+
+COMMUNICATION DRAFT GROUNDING RULES:
+- Only generate a communication draft if the source explicitly provides the actual wording/content of the message.
+- If the source only states that a notification/message must be sent or received but does not provide its wording, set the draft to exactly: "Not specified in source".
+- Never invent greetings, subject lines, attachments, explanations, status text, or other message wording.
+- The communication action itself must still remain a task when it is explicitly required by the source.
 6. Verification Agent: Audits the generated plan against the source document. Flag unsupported assumptions, invented branches, inferred procedures, missing requirements, or workflow steps that cannot be traced to the source. Do not report the workflow as fully verified (verified: false) if any unsupported statement is present.
 
 CORE GROUNDING RULES:
@@ -338,8 +344,7 @@ function generateFallbackWorkflow(sourceText: string) {
           type: 'Purchase Order Transmission',
           audience: 'Approved Vendor',
           trigger: 'PO issuance authorized by Department Head',
-          draft:
-            'Dear Vendor, please find attached official Purchase Order approved by procurement. Kindly confirm delivery timeline.',
+          draft: 'Not specified in source',
         },
       ],
       verification: [
@@ -465,13 +470,13 @@ function generateFallbackWorkflow(sourceText: string) {
           type: 'Leave Approval Notification',
           audience: 'Requesting Employee',
           trigger: 'Manager approval granted and recorded by HR',
-          draft: 'Your leave request has been approved and logged in company records.',
+          draft: 'Not specified in source',
         },
         {
           type: 'HR Review Alert',
           audience: 'HR Department',
           trigger: 'Leave request submitted with duration exceeding 3 working days',
-          draft: 'A leave request exceeding 3 working days requires HR review.',
+          draft: 'Not specified in source',
         },
       ],
       verification: [
@@ -538,7 +543,7 @@ function generateFallbackWorkflow(sourceText: string) {
         type: 'Workflow Update',
         audience: 'Process Participants',
         trigger: 'Workflow execution phase change',
-        draft: `Workflow generated for: ${title}. Key action items have been queued.`,
+        draft: 'Not specified in source',
       },
     ],
     verification: [
