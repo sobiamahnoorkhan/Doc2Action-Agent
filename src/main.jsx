@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
@@ -18,11 +18,11 @@ const DEMO_LEAVE = `EMPLOYEE LEAVE POLICY
 5. The employee receives an approval or rejection message.`;
 
 function App() {
-  const [file, setFile] = useState(null),
-    [text, setText] = useState(""),
-    [data, setData] = useState(null),
-    [loading, setLoading] = useState(false),
-    [error, setError] = useState("");
+  const [file, setFile] = useState(null);
+  const [text, setText] = useState("");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function analyze() {
     setLoading(true);
@@ -52,20 +52,36 @@ function App() {
   }
 
   return (
-    <div>
-      <header>
-        <b>Doc2<span>Action</span></b>
-        <small>MULTI-AGENT · BPA</small>
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark">D</div>
+          <div>
+            <b>Doc2<span>Action</span></b>
+            <small>AGENTIC WORKFLOW ENGINE</small>
+          </div>
+        </div>
+        <div className="top-status"><span className="status-dot" /> AI Engine Ready</div>
       </header>
+
       <main>
         <section className="hero">
-          <label>DOCUMENT → DECISION → ACTION → AUTOMATION</label>
-          <h1>Turn documents into <em>executable workflows.</em></h1>
-          <p>Specialized AI agents convert policies, SOPs and business documents into tasks, decisions, approvals, communications and a safe execution queue.</p>
+          <div className="eyebrow">DOCUMENT → DECISION → ACTION → AUTOMATION</div>
+          <h1>Turn business documents into <em>executable workflows.</em></h1>
+          <p>Upload a policy or SOP and let specialized agents extract requirements, assign work, map decisions, build the process, and audit every generated step against the source.</p>
+          <div className="hero-flow">
+            {["Understand", "Plan", "Decide", "Execute", "Verify"].map((x, i) => (
+              <React.Fragment key={x}>
+                <span>{x}</span>{i < 4 && <b>→</b>}
+              </React.Fragment>
+            ))}
+          </div>
         </section>
-        <section className="grid">
-          <div className="card">
-            <h2>Provide a document</h2>
+
+        <section className="workspace">
+          <div className="card input-card">
+            <div className="section-kicker">01 · INPUT</div>
+            <h2>Provide a business document</h2>
             <label className="drop">
               <input
                 type="file"
@@ -73,69 +89,44 @@ function App() {
                 onChange={(e) => {
                   setFile(e.target.files ? e.target.files[0] : null);
                   setText("");
+                  setData(null);
                 }}
               />
-              <strong>{file ? file.name : "Choose PDF, DOCX, XLSX or TXT"}</strong>
-              <small>or drag your document here</small>
+              <span className="upload-icon">↑</span>
+              <strong>{file ? file.name : "Drop your document here"}</strong>
+              <small>{file ? "Ready for analysis" : "PDF · DOCX · XLSX · TXT · MD"}</small>
             </label>
-            <div className="or">OR PASTE TEXT</div>
-            <textarea
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setFile(null);
-              }}
-              placeholder="Paste a business policy or procedure..."
-            />
+            <div className="or"><span>OR PASTE TEXT</span></div>
+            <textarea value={text} onChange={(e) => { setText(e.target.value); setFile(null); setData(null); }} placeholder="Paste a policy, SOP, procedure, or business document..." />
             <div className="demo-bar">
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  setText(DEMO_PROCUREMENT);
-                  setData(null);
-                }}
-              >
-                📋 Load Procurement Policy
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFile(null);
-                  setText(DEMO_LEAVE);
-                  setData(null);
-                }}
-              >
-                🏖️ Load Leave Policy
-              </button>
+              <button type="button" className="demo-btn" onClick={() => { setFile(null); setText(DEMO_PROCUREMENT); setData(null); }}>Procurement demo</button>
+              <button type="button" className="demo-btn" onClick={() => { setFile(null); setText(DEMO_LEAVE); setData(null); }}>Leave demo</button>
             </div>
-            <div className="actions">
-              <button disabled={loading || (!file && !text.trim())} onClick={analyze}>
-                {loading ? "Agents are working..." : "Run Agent Workflow →"}
-              </button>
-              {error && <p className="error">{error}</p>}
-            </div>
+            <button className="primary-btn" disabled={loading || (!file && !text.trim())} onClick={analyze}>
+              {loading ? "Agents are processing…" : "Run Agent Workflow  →"}
+            </button>
+            {error && <p className="error">{error}</p>}
           </div>
-          <div className="card">
-            <h2>Multi-agent pipeline</h2>
+
+          <div className="card pipeline-card">
+            <div className="section-kicker">02 · AGENT PIPELINE</div>
+            <h2>From document to action</h2>
             {[
-              "Document & Requirement Agent — extracts rules",
-              "Task Agent — creates actionable work",
-              "Decision Agent — maps conditions",
-              "Workflow Agent — sequences process",
-              "Communication Agent — drafts messages",
-              "Verification Agent — audits source traceability",
-            ].map((x, i) => (
-              <div className="agent" key={i}>
-                <b>0{i + 1}</b>
-                {x}
+              ["01", "Requirements Agent", "Extracts rules and requirements"],
+              ["02", "Task Agent", "Creates actionable work"],
+              ["03", "Decision Agent", "Maps conditions and routes"],
+              ["04", "Workflow Agent", "Sequences the process"],
+              ["05", "Verification Agent", "Audits source traceability"],
+            ].map(([n, title, desc]) => (
+              <div className="pipeline-item" key={n}>
+                <span>{n}</span><div><strong>{title}</strong><small>{desc}</small></div>
               </div>
             ))}
-            <div className="automation-badge">
-              Automation Executor — queues tasks, approvals and messages
-            </div>
+            <div className="safe-note"><span>✓</span><div><strong>Safe local automation</strong><small>Tasks and approvals are queued for demo execution — no external actions are sent.</small></div></div>
           </div>
         </section>
+
+        {loading && <div className="processing"><span className="spinner" /> Agents are analyzing the document and building the workflow…</div>}
         {data && <Results d={data} />}
       </main>
     </div>
@@ -143,97 +134,109 @@ function App() {
 }
 
 function Results({ d }) {
+  const counts = useMemo(() => ({
+    requirements: (d.requirements || []).length,
+    tasks: (d.tasks || []).length,
+    decisions: (d.decisions || []).length,
+    workflow: (d.workflow || []).length,
+  }), [d]);
+
   return (
-    <section className="card results">
-      <label>GENERATED BUSINESS PROCESS</label>
-      <h2>{d.document_summary || "Action Plan"}</h2>
-      <Block t="Requirements">
-        <ul>
-          {(d.requirements || []).map((x, i) => (
-            <li key={i}>{x}</li>
-          ))}
-        </ul>
-      </Block>
-      <Block t="Workflow">
-        {(d.workflow || []).map((x, i) => (
-          <div className="step" key={i}>
-            <b>{x.step || i + 1}</b>
-            <span>
-              {x.action}
-              <small>
-                {x.agent} · {x.automation || "manual_review"}
-              </small>
-            </span>
-          </div>
-        ))}
-      </Block>
-      <Block t="Tasks">
-        {(d.tasks || []).map((x, i) => (
-          <div className="task" key={i}>
-            <strong>{x.title}</strong>
-            <small>
-              {x.owner} · {x.priority}
-            </small>
-            <p>{x.description}</p>
-          </div>
-        ))}
-      </Block>
-      <Block t="Decision Points">
-        {(d.decisions || []).map((x, i) => (
-          <div className="decision" key={i}>
-            <strong>{x.condition}</strong>
-            <div>YES → {x.yes_action}</div>
-            <div>NO → {x.no_action}</div>
-          </div>
-        ))}
-      </Block>
-      <Block t="Communications">
-        {(d.communications || []).map((x, i) => (
-          <div className="message" key={i}>
-            <strong>
-              {x.type} · {x.audience}
-            </strong>
-            <p>{x.draft}</p>
-          </div>
-        ))}
-      </Block>
-      <Block t="Automation Execution">
-        <div className="execution">
-          <b>{d.automation?.mode}</b>
-          <span>{d.automation?.execution_id}</span>
+    <section className="results-wrap">
+      <div className="result-head">
+        <div>
+          <div className="eyebrow">03 · GENERATED BUSINESS PROCESS</div>
+          <h2>{d.document_summary || "Generated Action Plan"}</h2>
         </div>
-        {(d.automation?.task_queue || []).map((x, i) => (
-          <div className="queue" key={i}>
-            <b>{x.status}</b>
-            <span>
-              {x.task_id} — {x.title}
-            </span>
+        <span className="grounded-badge"><i /> Source Grounded</span>
+      </div>
+
+      <div className="metric-grid">
+        <Metric n={counts.requirements} label="Requirements" />
+        <Metric n={counts.tasks} label="Tasks" />
+        <Metric n={counts.decisions} label="Decisions" />
+        <Metric n={counts.workflow} label="Workflow steps" />
+      </div>
+
+      <div className="result-nav">
+        {["Overview", "Workflow", "Tasks", "Decisions", "Automation", "Verification"].map((x) => <a key={x} href={"#" + x.toLowerCase()}>{x}</a>)}
+      </div>
+
+      <div className="result-grid">
+        <div className="result-main">
+          <ResultSection id="overview" number="01" title="Requirements">
+            <div className="requirement-list">
+              {(d.requirements || []).map((x, i) => <div className="requirement" key={i}><span>✓</span><div>{x}<small>Source-Grounded</small></div></div>)}
+            </div>
+          </ResultSection>
+
+          <ResultSection id="workflow" number="02" title="Workflow">
+            <div className="workflow">
+              {(d.workflow || []).map((x, i) => (
+                <div className="workflow-step" key={i}>
+                  <div className="step-no">{String(x.step || i + 1).padStart(2, "0")}</div>
+                  <div className="step-body"><strong>{x.action}</strong><small>{x.agent || "Workflow Agent"} · {x.automation || "manual_review"}</small></div>
+                  {i < (d.workflow || []).length - 1 && <div className="connector" />}
+                </div>
+              ))}
+            </div>
+          </ResultSection>
+
+          <ResultSection id="tasks" number="03" title="Tasks">
+            <div className="task-grid">
+              {(d.tasks || []).map((x, i) => (
+                <div className="task-card" key={i}>
+                  <div className="task-top"><span>TASK-{String(i + 1).padStart(2, "0")}</span><b>{x.owner || "Not specified in source"}</b></div>
+                  <h3>{x.title}</h3>
+                  <p>{x.description}</p>
+                  <div className="task-meta"><span>Priority <b>{x.priority || "Not specified in source"}</b></span><span>Deadline <b>{x.deadline || "Not specified in source"}</b></span></div>
+                </div>
+              ))}
+            </div>
+          </ResultSection>
+
+          <ResultSection id="decisions" number="04" title="Decision Points">
+            {(d.decisions || []).map((x, i) => (
+              <div className="decision-card" key={i}>
+                <div className="decision-title"><span>?</span><strong>{x.condition}</strong></div>
+                <div className="routes"><div className="yes"><b>YES</b><span>{x.yes_action}</span></div><div className="no"><b>NO</b><span>{x.no_action}</span></div></div>
+              </div>
+            ))}
+          </ResultSection>
+
+          <ResultSection id="communications" number="05" title="Communications">
+            {(d.communications || []).map((x, i) => (
+              <div className="communication" key={i}><div><strong>{x.type || "Notification"}</strong><small>Audience · {x.audience}</small></div><div><small>Trigger · {x.trigger}</small><p>{x.draft || "Not specified in source"}</p></div></div>
+            ))}
+          </ResultSection>
+        </div>
+
+        <aside className="result-side">
+          <div className="side-card" id="automation">
+            <div className="side-kicker">AUTOMATION</div><h3>Safe Local Demo</h3>
+            <div className="execution"><span>Execution</span><b>{d.automation?.execution_id || "LOCAL-DEMO"}</b></div>
+            {(d.automation?.task_queue || []).map((x, i) => <div className="queue" key={i}><span className="queue-status">{x.status}</span><div><strong>{x.task_id} · {x.title}</strong><small>{x.owner || "Owner not specified"}</small></div></div>)}
+            <p className="side-note">No real emails, purchase orders, or external system changes are executed.</p>
           </div>
-        ))}
-      </Block>
-      <Block t="Verification">
-        {(d.verification || []).map((x, i) => (
-          <p className="verify" key={i}>
-            {x}
-          </p>
-        ))}
-        <p className={d.verified ? "verified" : "warning"}>
-          {d.verified
-            ? "Workflow verified against source"
-            : "Review verification findings before execution"}
-        </p>
-      </Block>
+
+          <div className="side-card" id="verification">
+            <div className="side-kicker">VERIFICATION</div><h3>Source Traceability</h3>
+            {(d.verification || []).map((x, i) => <div className="check" key={i}><span>✓</span>{x}</div>)}
+            <div className={d.verified ? "audit good" : "audit warning"}>{d.verification_statement || (d.verified ? "Workflow checked against the provided source." : "Review verification findings before execution.")}</div>
+          </div>
+
+          {(d.recommendations || []).length > 0 && <div className="side-card recommendations">
+            <div className="side-kicker purple">AI RECOMMENDATIONS</div><h3>Operational suggestions</h3>
+            <small>AI-generated · Not in source</small>
+            {(d.recommendations || []).map((x, i) => <div className="recommendation" key={i}>{x}</div>)}
+          </div>}
+        </aside>
+      </div>
     </section>
   );
 }
 
-function Block({ t, children }) {
-  return (
-    <div className="block">
-      <h3>{t}</h3>
-      {children}
-    </div>
-  );
-}
+function Metric({ n, label }) { return <div className="metric"><strong>{n}</strong><span>{label}</span></div>; }
+function ResultSection({ id, number, title, children }) { return <section className="result-section" id={id}><div className="section-title"><span>{number}</span><h2>{title}</h2></div>{children}</section>; }
 
 createRoot(document.getElementById("root")).render(<App />);
