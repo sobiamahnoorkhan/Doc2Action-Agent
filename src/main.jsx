@@ -24,6 +24,15 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  function clearInput() {
+    setFile(null);
+    setText("");
+    setData(null);
+    setError("");
+    const input = document.getElementById("document-file");
+    if (input) input.value = "";
+  }
+
   async function analyze() {
     setLoading(true);
     setError("");
@@ -84,12 +93,14 @@ function App() {
             <h2>Provide a business document</h2>
             <label className="drop">
               <input
+                id="document-file"
                 type="file"
                 accept=".pdf,.docx,.xlsx,.txt,.md"
                 onChange={(e) => {
                   setFile(e.target.files ? e.target.files[0] : null);
                   setText("");
                   setData(null);
+                  setError("");
                 }}
               />
               <span className="upload-icon">↑</span>
@@ -97,10 +108,11 @@ function App() {
               <small>{file ? "Ready for analysis" : "PDF · DOCX · XLSX · TXT · MD"}</small>
             </label>
             <div className="or"><span>OR PASTE TEXT</span></div>
-            <textarea value={text} onChange={(e) => { setText(e.target.value); setFile(null); setData(null); }} placeholder="Paste a policy, SOP, procedure, or business document..." />
+            <textarea value={text} onChange={(e) => { setText(e.target.value); setFile(null); setData(null); setError(""); }} placeholder="Paste a policy, SOP, procedure, or business document..." />
             <div className="demo-bar">
-              <button type="button" className="demo-btn" onClick={() => { setFile(null); setText(DEMO_PROCUREMENT); setData(null); }}>Procurement demo</button>
-              <button type="button" className="demo-btn" onClick={() => { setFile(null); setText(DEMO_LEAVE); setData(null); }}>Leave demo</button>
+              <button type="button" className="demo-btn" onClick={() => { setFile(null); setText(DEMO_PROCUREMENT); setData(null); setError(""); }}>Procurement demo</button>
+              <button type="button" className="demo-btn" onClick={() => { setFile(null); setText(DEMO_LEAVE); setData(null); setError(""); }}>Leave demo</button>
+              <button type="button" className="clear-btn" onClick={clearInput}>Clear</button>
             </div>
             <button className="primary-btn" disabled={loading || (!file && !text.trim())} onClick={analyze}>
               {loading ? "Agents are processing…" : "Run Agent Workflow  →"}
