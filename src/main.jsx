@@ -89,7 +89,7 @@ function App() {
           <div className="hero-flow">
             {["Understand", "Plan", "Decide", "Execute", "Communicate", "Verify"].map((x, i) => (
               <React.Fragment key={x}>
-                <span>{x}</span>{i < 4 && <b>→</b>}
+                <span>{x}</span>{i < 5 && <b>→</b>}
               </React.Fragment>
             ))}
           </div>
@@ -187,6 +187,20 @@ function Results({ d }) {
           </ResultSection>
 
           <ResultSection id="workflow" number="02" title="Workflow">
+            {(d.decisions || []).length > 0 && (
+              <div className="branch-map">
+                <div className="branch-map-title"><span>DECISION ROUTING</span><small>{d.decisions.length} explicit source branch{d.decisions.length === 1 ? "" : "es"}</small></div>
+                {(d.decisions || []).map((x, i) => (
+                  <div className="branch-node" key={i}>
+                    <div className="branch-condition"><span>?</span><strong>{x.condition}</strong></div>
+                    <div className="branch-routes">
+                      <div className="branch-route yes"><b>YES</b><span>{x.yes_action}</span></div>
+                      <div className="branch-route no"><b>NO</b><span>{x.no_action}</span></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="workflow">
               {(d.workflow || []).map((x, i) => (
                 <div className="workflow-step" key={i}>
