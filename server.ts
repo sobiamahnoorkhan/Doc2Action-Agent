@@ -161,6 +161,42 @@ REQUIRED JSON STRUCTURE:
 DOCUMENT CONTENT:
 `;
 
+function stabilizeDecisions(result: any, sourceText: string): any {
+  const source = sourceText.toLowerCase();
+  let decisions = Array.isArray(result.decisions) ? result.decisions : [];
+
+  // Remove model-generated "decision" objects that are only reviews/checks/actions.
+  decisions = decisions.filter((d: any) => {
+    const condition = String(d?.condition || '').toLowerCase();
+    const yesAction = String(d?.yes_action || '').toLowerCase();
+    const noAction = String(d?.no_action || '').toLowerCase();
+
+    const explicitBranch =
+      /\bif\b|\bwhen\b|\bunless\b|\bexceed(?:s|ing)?\b|\blonger than\b|\bnot available\b|\bincomplete\b|\bcomplete\b/.test(condition) ||
+      /\bapprove(?:s|d)? or reject(?:s|ed)?\b|\bapproval or rejection\b|\byes\b|\bno\b/.test(condition + ' ' + yesAction + ' ' + noAction);
+
+    const sourceSupportsCondition =
+      condition.length > 0 &&
+      (source.includes('if ' + condition) ||
+       source.includes(condition) ||
+       /above|exceed|longer than|incomplete|complete|not available|approved|rejected|approve or reject/.test(condition));
+
+    return explicitBranch && sourceSupportsCondition;
+  });
+
+  // A plain approval instruction without an explicit rejection/alternative route
+  // is a task, not a YES/NO decision.
+  decisions = decisions.filter((d: any) => {
+    const condition = String(d?.condition || '').toLowerCase();
+    const sourceHasApprovalBranch =
+      /approve or reject|approval or rejection|approves or rejects|approved or rejected/.test(source);
+    if (/approve|approval/.test(condition) && !sourceHasApprovalBranch) return false;
+    return true;
+  });
+
+  return { ...result, decisions };
+}
+
 async function callMultiAgentGemini(sourceText: string): Promise<any> {
   const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
   const prompt = MULTI_AGENT_PROMPT + '\n' + sourceText.slice(0, 50000);
@@ -173,6 +209,7 @@ async function callMultiAgentGemini(sourceText: string): Promise<any> {
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
+          temperature: 0,
         },
       });
 
@@ -186,18 +223,20 @@ async function callMultiAgentGemini(sourceText: string): Promise<any> {
 
       const parsed = JSON.parse(text);
       if (parsed && (parsed.requirements || parsed.tasks || parsed.workflow)) {
+        const stabilized = stabilizeDecisions(parsed, sourceText);
         return {
-          document_summary: parsed.document_summary || 'Analyzed Business Document',
-          requirements: Array.isArray(parsed.requirements) ? parsed.requirements : [],
-          constraints: Array.isArray(parsed.constraints) ? parsed.constraints : [],
-          tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
-          decisions: Array.isArray(parsed.decisions) ? parsed.decisions : [],
-          workflow: Array.isArray(parsed.workflow) ? parsed.workflow : [],
-          communications: Array.isArray(parsed.communications) ? parsed.communications : [],
-          verification: Array.isArray(parsed.verification) ? parsed.verification : [],
-          risks: Array.isArray(parsed.risks) ? parsed.risks : [],
-          verified: parsed.verified !== undefined ? Boolean(parsed.verified) : true,
+          document_summary: stabilized.document_summary || 'Analyzed Business Document',
+          requirements: Array.isArray(stabilized.requirements) ? stabilized.requirements : [],
+          constraints: Array.isArray(stabilized.constraints) ? stabilized.constraints : [],
+          tasks: Array.isArray(stabilized.tasks) ? stabilized.tasks : [],
+          decisions: Array.isArray(stabilized.decisions) ? stabilized.decisions : [],
+          workflow: Array.isArray(stabilized.workflow) ? stabilized.workflow : [],
+          communications: Array.isArray(stabilized.communications) ? stabilized.communications : [],
+          verification: Array.isArray(stabilized.verification) ? stabilized.verification : [],
+          risks: Array.isArray(stabilized.risks) ? stabilized.risks : [],
+          verified: stabilized.verified !== undefined ? Boolean(stabilized.verified) : true,
         };
+        
       }
     } catch (err: any) {
       const errStr = String(err?.message || err);
