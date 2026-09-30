@@ -1,0 +1,7 @@
+EMPLOYEE LEAVE POLICY
+
+1. Employees submit leave requests to their reporting manager.
+2. Leave requests longer than 3 working days require HR review.
+3. The manager approves or rejects the request.
+4. Approved leave is recorded by HR.
+5. The employee receives an approval or rejection message.
