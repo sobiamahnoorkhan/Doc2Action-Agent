@@ -79,7 +79,7 @@ Execute the following 6-agent pipeline on the document context and return a stru
 
 Agents in the pipeline:
 1. Document & Requirement Agent: Extracts the document purpose, explicit business requirements, and constraints/thresholds.
-2. Task Agent: Converts explicit requirements into actionable tasks with owners, priorities, and dependency chains. Only create tasks supported by the source text.
+2. Task Agent: Converts every explicit operational action or responsibility in the source into a task with an owner and dependency chain. This includes approval actions: if the source says a person/role must approve, review, reject, authorize, or sign off, create a corresponding task for that role. Do not omit an explicit approval/review action just because it is also represented as a decision point. Only create tasks supported by the source text. For priority and deadline, use "Not specified in source" when the source does not explicitly provide them.
 3. Decision Agent: Identifies conditional business decisions and their routes. For every decision, if either route is not explicitly specified in the source, set that route to "Not specified in source" rather than inventing a fallback or rejection procedure. Do not infer a missing NO branch merely because a YES branch exists.
 4. Workflow Agent: Sequences tasks into an executable end-to-end workflow (step, action, agent, depends_on, automation).
    (Valid automation types: "create_task", "approval_route", "generate_message", "checklist", "manual_review")
@@ -90,7 +90,9 @@ CORE GROUNDING RULES:
 - The supplied source document MUST be treated as authoritative.
 - Never invent requirements, owners, deadlines, approvals, policies, exceptions, rejection paths, alternative procedures, or facts.
 - Every generated statement must be traceable to explicit source text or to a direct, necessary sequencing of an explicitly stated step.
-- If a condition, branch, outcome, exception, criterion, deadline, or procedure is not specified in the source, use exactly: "Not specified in source".
+- Every explicit source action should be represented consistently: if an action is shown as a workflow step, it should also have a corresponding task when it represents work performed by a person/role.
+- Approval/review actions must not be represented only as decisions; create the corresponding human task as well.
+- If a condition, branch, outcome, exception, criterion, deadline, priority, or procedure is not specified in the source, use exactly: "Not specified in source".
 - Do not infer a missing NO branch merely because a YES branch exists.
 - Do not introduce broader concepts or labels that the source does not establish (for example, do not use "competitive bidding" when the source only says "vendor quotations").
 - If information is missing or unclear, mark owner or field as "Not specified in source".
@@ -107,7 +109,7 @@ REQUIRED JSON STRUCTURE:
       "title": "string",
       "description": "string",
       "owner": "string",
-      "priority": "HIGH" | "MEDIUM" | "LOW" | "CRITICAL",
+      "priority": "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" | "Not specified in source",
       "depends_on": []
     }
   ],
