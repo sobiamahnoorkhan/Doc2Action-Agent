@@ -4,17 +4,23 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from .document_parser import extract_text
 from .agents import run_document_workflow
+from .automation import execute_workflow
 
 load_dotenv()
-app = FastAPI(title="Doc2Action-Agent API", version="0.1.0")
+app = FastAPI(title="Doc2Action-Agent API", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 class TextRequest(BaseModel):
     text: str
 
+def build_response(filename: str, text: str):
+    result = run_document_workflow(text)
+    result["automation"] = execute_workflow(result)
+    return {"filename": filename, "result": result}
+
 @app.get("/health")
 def health():
-    return {"status":"ok","service":"Doc2Action-Agent"}
+    return {"status": "ok", "service": "Doc2Action-Agent", "multi_agent": True, "business_process_automation": True}
 
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...)):
@@ -22,7 +28,7 @@ async def analyze(file: UploadFile = File(...)):
         text = extract_text(file.filename or "", await file.read())
         if not text.strip():
             raise HTTPException(400, "No readable text found")
-        return {"filename": file.filename, "result": run_document_workflow(text)}
+        return build_response(file.filename or "document", text)
     except HTTPException:
         raise
     except Exception as exc:
@@ -33,6 +39,6 @@ def analyze_text(payload: TextRequest):
     if not payload.text.strip():
         raise HTTPException(400, "Text is required")
     try:
-        return {"filename":"pasted-document.txt","result":run_document_workflow(payload.text)}
+        return build_response("pasted-document.txt", payload.text)
     except Exception as exc:
         raise HTTPException(500, str(exc))
