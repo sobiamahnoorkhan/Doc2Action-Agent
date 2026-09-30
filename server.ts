@@ -163,36 +163,57 @@ DOCUMENT CONTENT:
 
 function stabilizeDecisions(result: any, sourceText: string): any {
   const source = sourceText.toLowerCase();
-  let decisions = Array.isArray(result.decisions) ? result.decisions : [];
+  const decisions: any[] = [];
 
-  // Remove model-generated "decision" objects that are only reviews/checks/actions.
-  decisions = decisions.filter((d: any) => {
-    const condition = String(d?.condition || '').toLowerCase();
-    const yesAction = String(d?.yes_action || '').toLowerCase();
-    const noAction = String(d?.no_action || '').toLowerCase();
+  const lines = sourceText.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
 
-    const explicitBranch =
-      /\bif\b|\bwhen\b|\bunless\b|\bexceed(?:s|ing)?\b|\blonger than\b|\bnot available\b|\bincomplete\b|\bcomplete\b/.test(condition) ||
-      /\bapprove(?:s|d)? or reject(?:s|ed)?\b|\bapproval or rejection\b|\byes\b|\bno\b/.test(condition + ' ' + yesAction + ' ' + noAction);
+  // Only explicit source branches become decisions.
+  for (const line of lines) {
+    const clean = line.replace(/^\s*\d+[.)]\s*/, '').trim();
 
-    const sourceSupportsCondition =
-      condition.length > 0 &&
-      (source.includes('if ' + condition) ||
-       source.includes(condition) ||
-       /above|exceed|longer than|incomplete|complete|not available|approved|rejected|approve or reject/.test(condition));
+    // Explicit if/when branches: require both a condition and an action route.
+    const ifMatch = clean.match(/^if\s+(.+?),\s*(.+)$/i);
+    if (ifMatch) {
+      const condition = ifMatch[1].trim();
+      const yesAction = ifMatch[2].trim();
+      const following = lines[lines.indexOf(line) + 1] || '';
+      const noMatch = following.match(/^if\s+(?:the\s+)?(.+?)\s+is\s+not\s+(.+?),\s*(.+)$/i);
+      if (noMatch) {
+        decisions.push({
+          condition: condition.replace(/[.]$/, ''),
+          yes_action: yesAction.replace(/[.]$/, ''),
+          no_action: noMatch[3].replace(/[.]$/, ''),
+        });
+      }
+    }
+  }
 
-    return explicitBranch && sourceSupportsCondition;
-  });
+  // Explicit approval/rejection is a decision only when the source establishes both outcomes.
+  const approvalLine = lines.find((l) => /\bapproves?\s+or\s+rejects?|\bapproval\s+or\s+rejection\b|\bapproved\s+or\s+rejected\b/i.test(l));
+  if (approvalLine) {
+    const clean = approvalLine.replace(/^\s*\d+[.)]\s*/, '').replace(/[.]$/, '').trim();
+    if (!decisions.some((d) => /approve|reject/i.test(d.condition))) {
+      decisions.push({
+        condition: clean,
+        yes_action: 'Approve the request',
+        no_action: 'Reject the request',
+      });
+    }
+  }
 
-  // A plain approval instruction without an explicit rejection/alternative route
-  // is a task, not a YES/NO decision.
-  decisions = decisions.filter((d: any) => {
-    const condition = String(d?.condition || '').toLowerCase();
-    const sourceHasApprovalBranch =
-      /approve or reject|approval or rejection|approves or rejects|approved or rejected/.test(source);
-    if (/approve|approval/.test(condition) && !sourceHasApprovalBranch) return false;
-    return true;
-  });
+  // Explicit threshold/duration conditions with a stated consequence.
+  for (const line of lines) {
+    const clean = line.replace(/^\s*\d+[.)]\s*/, '').replace(/[.]$/, '').trim();
+    const m = clean.match(/^(.+?)\s+(above|exceeding|longer than)\s+(.+?)\s+require\s+(.+)$/i);
+    if (m) {
+      const key = m[1].trim();
+      const condition = `${key} ${m[2].toLowerCase()} ${m[3].trim()}`;
+      const yesAction = `Require ${m[4].trim()}`;
+      if (!decisions.some((d) => d.condition.toLowerCase() === condition.toLowerCase())) {
+        decisions.push({ condition, yes_action: yesAction, no_action: 'Not specified in source' });
+      }
+    }
+  }
 
   return { ...result, decisions };
 }
