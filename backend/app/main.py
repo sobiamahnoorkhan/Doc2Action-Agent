@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,6 +9,9 @@ from .agents import run_document_workflow
 from .automation import execute_workflow
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("doc2action")
+
 app = FastAPI(title="Doc2Action-Agent API", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -32,7 +37,8 @@ async def analyze(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(500, str(exc))
+        logger.exception("Document analysis failed")
+        raise HTTPException(500, f"{type(exc).__name__}: {exc}")
 
 @app.post("/api/analyze-text")
 def analyze_text(payload: TextRequest):
@@ -41,4 +47,5 @@ def analyze_text(payload: TextRequest):
     try:
         return build_response("pasted-document.txt", payload.text)
     except Exception as exc:
-        raise HTTPException(500, str(exc))
+        logger.exception("Text analysis failed")
+        raise HTTPException(500, f"{type(exc).__name__}: {exc}")
