@@ -1,0 +1,7 @@
+PROCUREMENT POLICY
+
+1. Purchases above PKR 100,000 require at least three vendor quotations.
+2. The requesting department prepares a comparison of quotations.
+3. The department head approves the selected vendor before a purchase order is issued.
+4. Procurement sends the purchase order to the approved vendor.
+5. Finance verifies the invoice against the approved purchase order.
