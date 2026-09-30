@@ -23,6 +23,14 @@ function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const agentSteps = [
+    ["01", "Requirements Agent", "Extracts source-grounded rules"],
+    ["02", "Task Agent", "Creates actionable work"],
+    ["03", "Decision Agent", "Maps explicit conditions"],
+    ["04", "Workflow Agent", "Builds the executable sequence"],
+    ["05", "Communication Agent", "Grounds required communications"],
+    ["06", "Verification Agent", "Audits source traceability"],
+  ];
 
   function clearInput() {
     setFile(null);
@@ -70,7 +78,7 @@ function App() {
             <small>AGENTIC WORKFLOW ENGINE</small>
           </div>
         </div>
-        <div className="top-status"><span className="status-dot" /> AI Engine Ready</div>
+        <div className={"top-status " + (loading ? "is-processing" : "")}><span className="status-dot" /> {loading ? "Agents Processing" : data ? "Workflow Verified" : "AI Engine Ready"}</div>
       </header>
 
       <main>
@@ -79,7 +87,7 @@ function App() {
           <h1>Turn business documents into <em>executable workflows.</em></h1>
           <p>Upload a policy or SOP and let specialized agents extract requirements, assign work, map decisions, build the process, and audit every generated step against the source.</p>
           <div className="hero-flow">
-            {["Understand", "Plan", "Decide", "Execute", "Verify"].map((x, i) => (
+            {["Understand", "Plan", "Decide", "Execute", "Communicate", "Verify"].map((x, i) => (
               <React.Fragment key={x}>
                 <span>{x}</span>{i < 4 && <b>→</b>}
               </React.Fragment>
@@ -123,15 +131,10 @@ function App() {
           <div className="card pipeline-card">
             <div className="section-kicker">02 · AGENT PIPELINE</div>
             <h2>From document to action</h2>
-            {[
-              ["01", "Requirements Agent", "Extracts rules and requirements"],
-              ["02", "Task Agent", "Creates actionable work"],
-              ["03", "Decision Agent", "Maps conditions and routes"],
-              ["04", "Workflow Agent", "Sequences the process"],
-              ["05", "Verification Agent", "Audits source traceability"],
-            ].map(([n, title, desc]) => (
-              <div className="pipeline-item" key={n}>
+            {agentSteps.map(([n, title, desc]) => (
+              <div className={"pipeline-item " + (loading ? "processing-step" : data ? "completed-step" : "")} key={n}>
                 <span>{n}</span><div><strong>{title}</strong><small>{desc}</small></div>
+                {data && <b className="agent-check">✓</b>}
               </div>
             ))}
             <div className="safe-note"><span>✓</span><div><strong>Safe local automation</strong><small>Tasks and approvals are queued for demo execution — no external actions are sent.</small></div></div>
@@ -156,6 +159,7 @@ function Results({ d }) {
   return (
     <section className="results-wrap">
       <div className="result-head">
+        <div className="result-context"><span className="live-dot" /> Multi-agent analysis complete · 6 specialized agents</div>
         <div>
           <div className="eyebrow">03 · GENERATED BUSINESS PROCESS</div>
           <h2>{d.document_summary || "Generated Action Plan"}</h2>
@@ -171,7 +175,7 @@ function Results({ d }) {
       </div>
 
       <div className="result-nav">
-        {["Overview", "Workflow", "Tasks", "Decisions", "Automation", "Verification"].map((x) => <a key={x} href={"#" + x.toLowerCase()}>{x}</a>)}
+        {["Overview", "Workflow", "Tasks", "Decisions", "Communications", "Automation", "Verification"].map((x) => <a key={x} href={"#" + x.toLowerCase()}>{x}</a>)}
       </div>
 
       <div className="result-grid">
