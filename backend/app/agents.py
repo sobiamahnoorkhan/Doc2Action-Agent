@@ -4,11 +4,16 @@ from google.genai import types
 
 MODEL = "gemini-2.5-flash"
 
+_client_instance = None
+
 def _client():
+    global _client_instance
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY is not configured")
-    return genai.Client(api_key=key)
+    if _client_instance is None:
+        _client_instance = genai.Client(api_key=key)
+    return _client_instance
 
 def _json_agent(name: str, instruction: str, context: str) -> dict:
     prompt = f"""You are the {name} in Doc2Action-Agent, a specialized business-process AI agent.
