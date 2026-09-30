@@ -233,7 +233,7 @@ function stabilizeDecisions(result: any, sourceText: string): any {
 
   // Direct threshold statements can establish a decision even without an "if" clause.
   for (const clause of clauses) {
-    const match = clause.match(/^(.+?)\\s+(above|over|exceeding|more than|longer than|below|under|less than|fewer than)\\s+(.+?)\\s+(require|requires)\\s+(.+)$/i);
+    const match = clause.match(/^(.+?)\s+(above|over|exceeding|more than|longer than|below|under|less than|fewer than)\s+(.+?)\s+(require|requires)\s+(.+)$/i);
     if (match) {
       pushDecision(decisions, {
         condition: match[1].trim() + ' ' + match[2].toLowerCase() + ' ' + match[3].trim(),
