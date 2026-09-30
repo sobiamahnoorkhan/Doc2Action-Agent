@@ -1,8 +1,7 @@
 import json, os
 from google import genai
-from google.genai import types
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.8-flash"
 
 _client_instance = None
 
@@ -28,15 +27,18 @@ INSTRUCTION:
 CONTEXT:
 {context[:60000]}
 """
-    response = _client().models.generate_content(
+    interaction = _client().interactions.create(
         model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
+        input=prompt,
+        generation_config={"thinking_level": "low"},
     )
+    response_text = (interaction.output_text or "").strip()
+    if response_text.startswith("```"):
+        response_text = response_text.replace("```json", "", 1).replace("```", "", 1).strip()
     try:
-        return json.loads(response.text)
+        return json.loads(response_text)
     except json.JSONDecodeError as exc:
-        raise RuntimeError(f"{name} returned invalid JSON: {exc}")
+        raise RuntimeError(f"{name} returned invalid JSON: {exc}. Response: {response_text[:500]}")
 
 def run_document_workflow(source_text: str) -> dict:
     requirements = _json_agent(
