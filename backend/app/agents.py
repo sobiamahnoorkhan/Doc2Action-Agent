@@ -17,8 +17,11 @@ def _client():
 def _json_agent(name: str, instruction: str, context: str) -> dict:
     prompt = f"""You are the {name} in Doc2Action-Agent, a specialized business-process AI agent.
 Follow the instruction exactly.
-Use ONLY the supplied source/context. Never invent requirements, owners, deadlines, approvals, policies, or facts.
-If information is missing, use "Unknown".
+Use ONLY the supplied source/context. Never invent requirements, owners, deadlines, approvals, policies, exceptions, rejection paths, alternative procedures, or facts.
+Treat the supplied source as authoritative. Every generated statement must be traceable to explicit source text or to a direct, necessary sequencing of an explicitly stated step.
+If a condition, branch, outcome, exception, criterion, deadline, or procedure is not specified in the source, use exactly "Not specified in source".
+Do not infer a missing NO branch merely because a YES branch exists.
+Do not introduce broader concepts or labels that the source does not establish, such as "competitive bidding" when the source only says "vendor quotations".
 Return valid JSON only. Do not use markdown fences.
 
 INSTRUCTION:
@@ -68,7 +71,8 @@ Only create tasks supported by the requirements.""",
         "Decision Agent",
         """Identify conditional business decisions and their routes.
 Return: decisions: array of {condition,yes_action,no_action}.
-Only include conditions explicitly supported by the document.""",
+Only include conditions explicitly supported by the document.
+For every decision, if either route is not explicitly specified, set that route to "Not specified in source" rather than inventing a fallback or rejection procedure.""",
         json.dumps({"requirements": requirements, "tasks": tasks, "source": source_text[:30000]}),
     )
     workflow = _json_agent(
@@ -90,7 +94,8 @@ Draft messages only from facts present in the context.""",
         "Verification Agent",
         """Audit the generated plan against the source document.
 Return: verification: array of strings, risks: array of strings, verified: boolean.
-Flag unsupported assumptions, missing requirements, or workflow steps that cannot be traced to the source.""",
+Flag unsupported assumptions, invented branches, inferred procedures, missing requirements, or workflow steps that cannot be traced to the source.
+Do not report the workflow as fully verified if any unsupported statement is present.""",
         json.dumps({
             "source": source_text,
             "requirements": requirements,
